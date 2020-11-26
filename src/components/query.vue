@@ -2,120 +2,111 @@
  * @Author: 汪波
  * @Date: 2020-11-12 11:08:17
  * @LastEditors: 郭德纲
- * @LastEditTime: 2020-11-19 11:22:14
+ * @LastEditTime: 2020-11-26 11:35:53
  * @Description: 查询控件
 -->
 <template>
   <div>
-     <a-form layout="inline" @submit="getData">
-          <a-row type="flex" justify="start" :gutter="24">
-            <!--页面内容-->
-            <div style="width:100%" v-for="(obj, index) in universal" :key="index">
-              <!--以组为单位的连接符-->
-              <a-col style="text-align:center" :span="12" v-if="obj.isLogic && index != 0" :offset="6">
-                <a-dropdown>
-                  <a-button class="tagsbutton" type="dashed">{{ obj.logic.label }}</a-button>
+    <a-form layout="inline" @submit="getData">
+      <a-row type="flex" justify="start" :gutter="24">
+        <!--页面内容-->
+        <div style="width:100%" v-for="(obj, index) in universal" :key="index">
+          <!--以组为单位的连接符-->
+          <a-col style="text-align:center" :span="12" v-if="obj.isLogic && index != 0" :offset="6">
+            <a-dropdown>
+              <a-button class="tagsbutton" type="dashed">{{ obj.logic.label }}</a-button>
+              <a-menu slot="overlay">
+                <a-menu-item v-for="(s,sindex) in logic" :key="sindex" @click="changeLogic(s,obj)">{{s.label}}</a-menu-item>
+              </a-menu>
+            </a-dropdown>
+          </a-col>
+          <!--正式内容拼接-->
+          <a-col :span="24" class="divBorder first">
+            <a-col :span="2" class="divPad">
+              <a-icon v-if="isShow && index === (universal.length - 1)" class="divIcon" type="plus-circle" @click="objAdd(obj,universal)" />
+              <a-icon v-if="universal.length !== 1" type="minus-circle" class="divIcon divIconRed" @click="objAdd(obj,universal,index)" />
+              第{{index+1}}组
+            </a-col>
+            <transition-group name="list-complete" tag="p">
+              <a-col
+                style="display:flex"
+                class="flex-1 childFirst divBottom list-complete-item"
+                v-for="(j, jindex) in obj.queryList"
+                :key="jindex.toString()"
+                :span="jindex === 0 ? '10':'12'"
+                :style="{'padding-left': jindex === 0 ? '0' : '12px'}"
+              >
+                <!--组里边条件之间的连接符号, 并且要判断不能是第一个-->
+                <a-dropdown class="divMarginLeft" v-if="j.isLogic && jindex != 0">
+                  <a-button type="dashed" class="buttons">{{ j.logic.label }}</a-button>
                   <a-menu slot="overlay">
-                    <a-menu-item v-for="(s,sindex) in logic" :key="sindex" @click="changeLogic(s,obj)">{{s.label}}</a-menu-item>
+                    <a-menu-item v-for="(s,sindex) in logic" :key="sindex" @click="changeLogic(s,j,jindex,)">{{s.label}}</a-menu-item>
                   </a-menu>
                 </a-dropdown>
-              </a-col>
-              <!--正式内容拼接-->
-              <a-col :span="24" class="divBorder first">
-                <a-col :span="2" class="divPad">
-                  <a-icon v-if="isShow && index === (universal.length - 1)" class="divIcon" type="plus-circle" @click="objAdd(obj,universal)" />
-                  <a-icon v-if="universal.length !== 1" type="minus-circle" class="divIcon divIconRed" @click="objAdd(obj,universal,index)" />
-                  第{{index+1}}组
-                </a-col>
-                <transition-group name="list-complete" tag="p">
-                  <a-col
-                    style="display:flex"
-                    class="flex-1 childFirst divBottom list-complete-item"
-                    v-for="(j, jindex) in obj.queryList"
-                    :key="jindex.toString()"
-                    :span="jindex === 0 ? '10':'12'"
-                    :style="{'padding-left': jindex === 0 ? '0' : '12px'}"
+                <!--字段名，条件名-->
+                <a-select showSearch allowClear v-model="j.field" style="width:100%" @change="ChangeOperator(j,obj)" name="checkStatus" placeholder="搜索条件">
+                  <a-select-option v-for="(i, iindex) in obj.field" :key="iindex" :value="i.value">{{i.label}}</a-select-option>
+                </a-select>
+                <!--运算符-->
+                <a-popover class="divMargin" :style="{'width': j.operator.label.length > '2' ? '30%' : '20%'}" placement="top">
+                  <a-button>
+                    <span>{{j.operator.label}}</span>
+                  </a-button>
+                  <template slot="content">
+                    <a-tag v-for="(tag, tagindex) in j.hotTags" :key="tagindex" @click="handleChange($event,tag,j.hotTags,j)">{{tag.label}}</a-tag>
+                  </template>
+                </a-popover>
+                <!--值-->
+                <div class="iconDiv">
+                  <!--具体内容-->
+                  <a-input
+                    v-if="j.type === 'input'"
+                    style="width:100%"
+                    class="container"
+                    v-model="j.value"
+                    name="itemName"
+                    :placeholder="j.operator.value === 'IN' || j.operator.value === 'NOT_IN' ? '请填写值,以英文逗号分隔':'请填写值'"
+                    @mouseover="changeIcon(index,jindex)"
+                  />
+                  <a-input v-else-if="j.type === 'selectNull'" style="width:100%" class="container" v-model="isNull" :readonly="true" @mouseover="changeIcon(index,jindex)" />
+                  <a-select
+                    v-else-if="j.type === 'selectIN'"
+                    mode="multiple"
+                    style="width:100%"
+                    class="container"
+                    @mouseover="changeIcon(index,jindex)"
+                    showSearch
+                    allowClear
+                    v-model="j.value"
+                    :placeholder="'请选择值'"
                   >
-                    <!--组里边条件之间的连接符号, 并且要判断不能是第一个-->
-                    <a-dropdown class="divMarginLeft" v-if="j.isLogic && jindex != 0">
-                      <a-button type="dashed" class="buttons">{{ j.logic.label }}</a-button>
-                      <a-menu slot="overlay">
-                        <a-menu-item v-for="(s,sindex) in logic" :key="sindex" @click="changeLogic(s,j,jindex,)">{{s.label}}</a-menu-item>
-                      </a-menu>
-                    </a-dropdown>
-                    <!--字段名，条件名-->
-                    <a-select showSearch allowClear v-model="j.field" style="width:100%" @change="ChangeOperator(j,obj)" name="checkStatus" placeholder="搜索条件">
-                      <a-select-option v-for="(i, iindex) in obj.field" :key="iindex" :value="i.value">{{i.label}}</a-select-option>
-                    </a-select>
-                    <!--运算符-->
-                    <a-popover class="divMargin" :style="{'width': j.operator.label.length > '2' ? '30%' : '20%'}" placement="top">
-                      <a-button>
-                        <span>{{j.operator.label}}</span>
-                      </a-button>
-                      <template slot="content">
-                        <a-tag v-for="(tag, tagindex) in j.hotTags" :key="tagindex" @click="handleChange($event,tag,j.hotTags,j)">{{tag.label}}</a-tag>
-                      </template>
-                    </a-popover>
-                    <!--值-->
-                    <div class="iconDiv">
-                      <!--具体内容-->
-                      <a-input
-                        v-if="j.type === 'input'"
-                        style="width:100%"
-                        class="container"
-                        v-model="j.value"
-                        name="itemName"
-                        :placeholder="j.operator.value === 'IN' || j.operator.value === 'NOT_IN' ? '请填写值,以英文逗号分隔':'请填写值'"
-                        @mouseover="changeIcon(index,jindex)"
-                      />
-                      <a-input v-else-if="j.type === 'selectNull'" style="width:100%" class="container" v-model="isNull" :readonly="true" @mouseover="changeIcon(index,jindex)" />
-                      <a-select
-                        v-else-if="j.type === 'selectIN'"
-                        mode="multiple"
-                        style="width:100%"
-                        class="container"
-                        @mouseover="changeIcon(index,jindex)"
-                        showSearch
-                        allowClear
-                        v-model="j.value"
-                        :placeholder="'请选择值'"
-                      >
-                        <a-select-option v-for="(y, yindex) in j.select" :key="yindex" :value="y.value">{{y.name}}</a-select-option>
-                      </a-select>
-                      <a-select
-                        v-else-if="j.type === 'select'"
-                        style="width:100%"
-                        class="container"
-                        @mouseover="changeIcon(index,jindex)"
-                        showSearch
-                        allowClear
-                        v-model="j.value"
-                        :placeholder="'请选择值'"
-                      >
-                        <a-select-option v-for="(y, yindex) in j.select" :key="yindex" :value="y.label">{{y.value}}</a-select-option>
-                      </a-select>
-                      <a-date-picker v-else-if="j.type === 'date'" style="width:100%" class="container" @mouseover="changeIcon(index,jindex)" v-model="j.value" :placeholder="'请选择时间'" />
+                    <a-select-option v-for="(y, yindex) in j.select" :key="yindex" :value="y.value">{{y.name}}</a-select-option>
+                  </a-select>
+                  <a-select v-else-if="j.type === 'select'" style="width:100%" class="container" @mouseover="changeIcon(index,jindex)" showSearch allowClear v-model="j.value" :placeholder="'请选择值'">
+                    <a-select-option v-for="(y, yindex) in j.select" :key="yindex" :value="y.label">{{y.value}}</a-select-option>
+                  </a-select>
+                  <a-date-picker v-else-if="j.type === 'date'" style="width:100%" class="container" @mouseover="changeIcon(index,jindex)" v-model="j.value" :placeholder="'请选择时间'" />
 
-                      <a-range-picker v-else-if="j.type === 'dateRange'" style="width:100%" class="container" @mouseover="changeIcon(index,jindex)" v-model="datetime" :format="'yyyy-MM-dd'" />
-                      <a-input-group v-else style="width:100%" compact class="container" @mouseover="changeIcon(index,jindex)">
-                        <a-input type="number" :placeholder="'最小值'" style="width: 66px; text-align: center;" v-model="j.value" />
-                        <a-input type="text" placeholder="~" style="width: 2px; border-left: 0px; pointer-events: none;" />
-                        <a-input type="number" placeholder="最大值" style="width: 66px; text-align: center; border-left: 0px;" [(ngModel)]="j.value1" />
-                      </a-input-group>
-                      <a-icon class="iconS" theme="twoTone" two-tone-color="#f5222d" type="close-circle" v-if="obj.queryList.length > 1 && j.isIcon" @click="delIcon(j,index,jindex)" />
-                    </div>
-                    <a-button class="divMarginLeft addIcon" v-if="j.isAdd" shape="circle" icon="plus" @click="add(j,obj.queryList)" />
-                  </a-col>
-                </transition-group>
+                  <a-range-picker v-else-if="j.type === 'dateRange'" style="width:100%" class="container" @mouseover="changeIcon(index,jindex)" v-model="datetime" :format="'yyyy-MM-dd'" />
+                  <a-input-group v-else style="width:100%" compact class="container" @mouseover="changeIcon(index,jindex)">
+                    <a-input type="number" :placeholder="'最小值'" style="width: 66px; text-align: center;" v-model="j.value" />
+                    <a-input type="text" placeholder="~" style="width: 2px; border-left: 0px; pointer-events: none;" />
+                    <a-input type="number" placeholder="最大值" style="width: 66px; text-align: center; border-left: 0px;" [(ngModel)]="j.value1" />
+                  </a-input-group>
+                  <a-icon class="iconS" theme="twoTone" two-tone-color="#f5222d" type="close-circle" v-if="obj.queryList.length > 1 && j.isIcon" @click="delIcon(j,index,jindex)" />
+                </div>
+                <a-button class="divMarginLeft addIcon" v-if="j.isAdd" shape="circle" icon="plus" @click="add(j,obj.queryList)" />
               </a-col>
-            </div>
-            <!--按钮-->
-            <a-col :span="24" class="button-div">
-              <a-button class="button-div-botton" type="primary" shape="round" html-type="submit" :loading="isLoading" size="default">{{okText}}</a-button>
-              <a-button class="button-div-botton" size="default" shape="round" @click="reset" style="margin-left:10px">重置</a-button>
-            </a-col>
-          </a-row>
-        </a-form>
+            </transition-group>
+          </a-col>
+        </div>
+        <!--按钮-->
+        <a-col :span="24" class="button-div">
+          <a-button class="button-div-botton" type="primary" shape="round" html-type="submit" :loading="isLoading" size="default">{{okText}}</a-button>
+          <a-button class="button-div-botton" size="default" shape="round" @click="reset" style="margin-left:10px">重置</a-button>
+        </a-col>
+      </a-row>
+    </a-form>
   </div>
 </template>
 
@@ -619,6 +610,7 @@ button {
 
 .buttons {
   border-radius: 25px;
+  margin: 0 20px 0 0;
 }
 
 .list-complete-item {

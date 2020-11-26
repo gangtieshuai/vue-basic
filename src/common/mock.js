@@ -2,7 +2,7 @@
  * @Author: 郭德纲
  * @Date: 2020-11-11 11:10:52
  * @LastEditors: 郭德纲
- * @LastEditTime: 2020-11-24 11:39:59
+ * @LastEditTime: 2020-11-26 11:12:29
  * @Description: mock数据
  */
 import Mock from 'mockjs'
@@ -21,7 +21,7 @@ Mock.mock(BASE_API + 'api/auth', {
       '湖南分行',
       '湖南支行'
     ],
-    role: '001000'
+    role: '001001'
     // 'role|1': [
     //   '000001', // 管理员
     //   '000010', // 省行
